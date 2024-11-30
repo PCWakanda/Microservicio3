@@ -9,6 +9,6 @@ public class RabbitMQConfig {
 
     @Bean
     public Queue logQueue() {
-        return new Queue("microservicio3LogQueue", false);
+        return new Queue("logQueue", false);
     }
 }
