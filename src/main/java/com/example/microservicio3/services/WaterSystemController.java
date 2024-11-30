@@ -1,11 +1,13 @@
 package com.example.microservicio3.services;
 
 import com.example.microservicio3.models.SensorData;
+import com.example.microservicio3.models.SensorDataRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.GetMapping;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
@@ -18,10 +20,12 @@ public class WaterSystemController {
     private final Sinks.Many<SensorData> sensorSink = Sinks.many().multicast().onBackpressureBuffer();
     private final RabbitTemplate rabbitTemplate;
     private final Random random = new Random();
+    private final SensorDataRepository sensorDataRepository;
 
     @Autowired
-    public WaterSystemController(RabbitTemplate rabbitTemplate) {
+    public WaterSystemController(RabbitTemplate rabbitTemplate, SensorDataRepository sensorDataRepository) {
         this.rabbitTemplate = rabbitTemplate;
+        this.sensorDataRepository = sensorDataRepository;
     }
 
     public Flux<SensorData> getSensorDataStream() {
@@ -34,6 +38,9 @@ public class WaterSystemController {
 
         SensorData sensorData = new SensorData(0, 0, 0, pressure, flowRate);
         sensorSink.tryEmitNext(sensorData);
+
+        // Guardar datos de sensores en la base de datos
+        sensorDataRepository.save(sensorData);
 
         // Enviar logs de sensores
         String logMessage = "Datos de sensores: Presión=" + pressure + ", Flujo=" + flowRate;
@@ -80,5 +87,10 @@ public class WaterSystemController {
 
     private String formatLogMessage(String message) {
         return "[INFO] " + message;
+    }
+
+    @GetMapping("/sensors/data")
+    public Flux<SensorData> getSensorData() {
+        return getSensorDataStream();
     }
 }
